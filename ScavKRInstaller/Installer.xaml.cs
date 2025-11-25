@@ -17,7 +17,7 @@ public partial class Installer : Window
     public static string ModZipArchivePath="";
     public static string BepinZipArchivePath="";
     public static readonly string ModZipURL=@"https://github.com/Krokosha666/cas-unk-krokosha-multiplayer-coop/archive/refs/heads/main.zip";
-    public static readonly string BepinZipURL=@"http://github.com/BepInEx/BepInEx/releases/latest/download/BepInEx_win_x64_5.4.23.4.zip";
+    public static readonly string BepinZipURL= @"https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.4/BepInEx_win_x64_5.4.23.4.zip";
     public Installer()
     {
         InitializeComponent();
@@ -55,7 +55,6 @@ public partial class Installer : Window
     {
         Installer.GamePath=this.TextBoxGamePath.Text;
         Installer.GameFolderPath=Installer.GamePath.Substring(0, Installer.GamePath.Length - (Installer.GamePath.Length - Installer.GamePath.LastIndexOf('\\')));
-        Debug.WriteLine("\n\n"+Installer.GameFolderPath);
     }
 
     private void SetStatus(string status)
@@ -64,6 +63,7 @@ public partial class Installer : Window
     }
     private async void ButtonInstall_Click(object sender, RoutedEventArgs e)
     {
+        this.ButtonInstall.IsEnabled = false;
         var readyChecks=new Func<bool>[]
         {
             () => !String.IsNullOrEmpty(Installer.GamePath),
@@ -72,7 +72,12 @@ public partial class Installer : Window
         if (!ready)
         {
             MessageBox.Show("Game path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
+            goto CancelInstallation;
+        }
+        if (FileOperations.CheckForMod(Installer.GameFolderPath))
+        {
+            MessageBoxResult msgBoxModAlreadyInstalled = MessageBox.Show("Looks like the mod is already installed!\n\nInstaller is going to download and install the latest version of the mod from github.\n\nContinue?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if(msgBoxModAlreadyInstalled == MessageBoxResult.No) goto CancelInstallation;
         }
         if ((bool)this.CheckBoxSavefileDelete.IsChecked)
         {
@@ -87,7 +92,7 @@ public partial class Installer : Window
             }
             catch(TimeoutException)
             {
-                return;
+                goto CancelInstallation;
             }
         }
         this.SetStatus("Downloading multiplayer mod...");
@@ -97,7 +102,7 @@ public partial class Installer : Window
         }
         catch(TimeoutException)
         {
-            return;
+            goto CancelInstallation;
         }
         List<string> finalUnzipPaths=new();
         if(!String.IsNullOrEmpty(Installer.BepinZipArchivePath))
@@ -107,13 +112,28 @@ public partial class Installer : Window
         finalUnzipPaths.Add(Installer.ModZipArchivePath);
         this.SetStatus("Extracting archives...");
         string[] unpackedDirs = [];
-        FileOperations.UnzipFiles(finalUnzipPaths.ToArray(), out unpackedDirs);
+        if (!FileOperations.UnzipFiles(finalUnzipPaths.ToArray(), out unpackedDirs))
+        {
+            MessageBox.Show("Error while unzipping mods! Ensure that your %TEMP% folder has write permissions!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            goto CancelInstallation;
+        }
         this.SetStatus("Moving files...");
-        FileOperations.HandleCopyingFiles(unpackedDirs);
+        if (!FileOperations.HandleCopyingFiles(unpackedDirs))
+        {
+            MessageBox.Show("Error while copying files to the game folder! Ensure that your game folder has write permissions!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            goto CancelInstallation;
+        }
         this.SetStatus("Done!");
-        MessageBoxResult msgBoxResult = MessageBox.Show("Mod has been succesfully installed! Don't forget to delete this installer.\nLaunch the game?", "Message", MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if(msgBoxResult == MessageBoxResult.Yes) Process.Start(new ProcessStartInfo(Installer.GamePath));
+        MessageBoxResult msgBoxFinished = MessageBox.Show("Mod has been succesfully installed! Don't forget to delete this installer.\n\nLaunch the game?", "Message", MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if(msgBoxFinished == MessageBoxResult.Yes) Process.Start(new ProcessStartInfo(Installer.GamePath));
         Environment.Exit(0);
+        CancelInstallation:
+        {
+            this.ButtonInstall.IsEnabled = true;
+            this.ButtonInstall.Content = "Install";
+            FileOperations.DeleteTempFiles();
+            return;
+        }
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

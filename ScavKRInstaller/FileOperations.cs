@@ -21,12 +21,12 @@ namespace ScavKRInstaller
                     path = possibleGamePath;
                     return true;
                 }
-                throw new ArgumentException("Provided directory does not contain game executable!");
+                throw new ArgumentException("Provided directory does not contain a game executable!");
             }
             if((attributes & FileAttributes.Archive) == FileAttributes.Archive)
             {
                 if(Path.GetFileName(path) == gameName) return true;
-                throw new ArgumentException("Provided file is not game executable!");
+                throw new ArgumentException("Provided file is not a game executable!");
             }
             return false;
         }
@@ -80,6 +80,10 @@ namespace ScavKRInstaller
         {
             return Directory.Exists(gameFolder+"\\BepInEx");
         }
+        public static bool CheckForMod(string gameFolder)
+        {
+            return File.Exists(gameFolder+"\\BepInEx\\plugins\\KrokoshaCasualtiesMP.dll");
+        }
         public async static Task<string> DownloadArchive(string url)
         {
             HttpClient client = new();
@@ -97,15 +101,15 @@ namespace ScavKRInstaller
             }
             catch(TaskCanceledException ex) when(ex.InnerException is TimeoutException)
             {
-                MessageBox.Show($"Connection has timed while downloading {filename}! Ensure that github.com is accessible and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Connection has timed while downloading {filename}! Ensure that github.com is reachable and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw new TimeoutException();
             }
             catch(HttpRequestException ex)
             {
-                MessageBox.Show($"Could not connect to github while downloading {filename}! Ensure that github.com is accessible and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Could not connect to github while downloading {filename}! Ensure that github.com is reachable and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw new TimeoutException();
             }
-            throw new Exception($"Something bad has happened while downloading {filename}!");
+            throw new Exception($"Something really bad has happened while downloading {filename}!");
         }
         public static bool UnzipFiles(string[] zippedPaths, out string[] unzippedPaths)
         {
@@ -117,8 +121,9 @@ namespace ScavKRInstaller
                 try
                 {
                     ZipFile.ExtractToDirectory(path, directoryPath);
+                    result = true;
                 }
-                catch //he he i am sure i won't regret cutting corners later
+                catch(Exception ex) //he he i am sure i won't regret cutting corners later
                 {
                     unzippedPaths = [];
                     return false;
@@ -144,21 +149,29 @@ namespace ScavKRInstaller
                     File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), true);
                 }
             }
+            int copiedFolders = 0;
             foreach(string path in paths)
             {
                 string filename = path.Substring(path.LastIndexOf('\\'));
                 if(Installer.BepinZipArchivePath.Contains(filename))
                 {
                     CloneDirectory(path, Installer.GameFolderPath);
+                    copiedFolders++;
                 }
                 if(Installer.ModZipArchivePath.Contains(filename))
                 {
                     string[] dirs = Directory.GetDirectories(path);
                     string finalModPath = dirs[0];
                     CloneDirectory(finalModPath, Installer.GameFolderPath);
+                    copiedFolders++;
                 }
             }
-            return false;
+            if (copiedFolders != paths.Length)
+            {
+                MessageBox.Show("Files were only copied partially! This is very bad, and should never happen. If that's the case, you would want to do a complete reinstallation of the game. If the error persists on a fresh install, consider manual installation.", "Critical Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            return true;
 
         }
         public static void DeleteTempFiles()
