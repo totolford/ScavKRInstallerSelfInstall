@@ -10,6 +10,8 @@ namespace ScavKRInstaller
     public static class FileOperations
     {
         private const string GameName = "CasualtiesUnknown.exe";
+        private const string DevName = "Orsoniks";
+        private const string SavefileName = "save.sv";
 
         public static bool HandleProvidedGamePath(ref string path)
         {
@@ -17,7 +19,7 @@ namespace ScavKRInstaller
             FileAttributes attributes = File.GetAttributes(path);
             if((attributes & FileAttributes.Directory) == FileAttributes.Directory)
             {
-                string possibleGamePath = path+"\\"+gameName;
+                string possibleGamePath = path+Path.DirectorySeparatorChar+gameName;
                 if(File.Exists(possibleGamePath))
                 {
                     path = possibleGamePath;
@@ -41,15 +43,15 @@ namespace ScavKRInstaller
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), //Although, it wouldn't hurt to check other folders too
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) //Just in case
             };
-            string devName = "Orsoniks";
-            string[] gameNames = { "CasualtiesUnknown", "CasualtiesUnknownDemo" }; //Before beta 4, game saved to CasualtiesUnknownDemo. We'll clean both in case it changes again.
-            string savefileName = "save.sv";
+            string devName = DevName;
+            string[] gameNames = GetGameNames(); //Before beta 4, game saved to CasualtiesUnknownDemo. We'll clean both in case it changes again.
+            string savefileName = SavefileName;
             bool result = false;
             foreach(string appdataPath in appdataPaths)
             {
                 foreach(string name in gameNames)
                 {
-                    string path = appdataPath+"\\"+devName+"\\"+name+"\\"+savefileName;
+                    string path = appdataPath+Path.DirectorySeparatorChar+devName+Path.DirectorySeparatorChar+name+Path.DirectorySeparatorChar+savefileName;
                     if(File.Exists(path)) resultPaths.Add(path);
                     result=true;
                 }
@@ -62,6 +64,12 @@ namespace ScavKRInstaller
             saveFilePaths= [];
             return false;
         }
+
+        private static string[] GetGameNames()
+        {
+            return new string[] { "CasualtiesUnknownDemo", "CasualtiesUnknown"};
+        }
+
         public static bool DeleteSavefiles(string[] paths)
         {
             bool hasDeleted = false;
@@ -84,11 +92,11 @@ namespace ScavKRInstaller
         }
         public static bool CheckForBepin(string gameFolder)
         {
-            return Directory.Exists(gameFolder+"\\BepInEx");
+            return Directory.Exists(gameFolder+Path.DirectorySeparatorChar+"BepInEx");
         }
         public static bool CheckForMod(string gameFolder)
         {
-            return File.Exists(gameFolder+"\\BepInEx\\plugins\\KrokoshaCasualtiesMP.dll");
+            return File.Exists(gameFolder+$"{Path.DirectorySeparatorChar}BepInEx{Path.DirectorySeparatorChar}plugins{Path.DirectorySeparatorChar}KrokoshaCasualtiesMP.dll");
         }
         public static async Task<string> TryGameDownload(string[] urls)
         {
@@ -111,7 +119,7 @@ namespace ScavKRInstaller
             HttpClient client = new();
             Uri uri = new(url);
             string filename = FileOperations.GetZipFilename(url);
-            string tempFolderFilePath = GetTempFolderPath()+$"\\{filename}";
+            string tempFolderFilePath = GetTempFolderPath()+Path.DirectorySeparatorChar+filename;
             try
             {
                 HttpResponseMessage response = await client.GetAsync(uri);
@@ -174,14 +182,21 @@ namespace ScavKRInstaller
             int copiedFolders = 0;
             foreach(string path in paths)
             {
-                string targetFolder = path.Substring(path.LastIndexOf('\\') + 1);
+                string targetFolder = path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1);
                 if(Installer.GameDownloadURLs[0].Contains(targetFolder))
                 {
                     CloneDirectory(path, Installer.GameFolderPath);
                     copiedFolders++;
-                    string[] dirs = Directory.GetDirectories(Installer.GameFolderPath);
-                    Installer.GameFolderPath = dirs[0];
-                    Installer.GamePath = dirs[0] + "\\"+GameName;
+                    foreach (string dir in GetGameNames())
+                    {
+                        string result = Installer.GameFolderPath+Path.DirectorySeparatorChar+dir;
+                        if(Directory.Exists(result))
+                        {
+                            Installer.GameFolderPath=result;
+                            break;
+                        }
+                    }
+                    Installer.GamePath = Installer.GameFolderPath+Path.DirectorySeparatorChar+GameName;
                     continue;
                 }
                 if(Installer.BepinZipArchivePath.Contains(targetFolder))
