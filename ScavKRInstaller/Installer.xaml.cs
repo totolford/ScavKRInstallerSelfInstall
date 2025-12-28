@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
@@ -74,7 +75,7 @@ public partial class Installer : Window
     private void TextBoxGamePath_TextChanged(object sender, TextChangedEventArgs e)
     {
         Installer.GamePath=this.TextBoxGamePath.Text;
-        if (Installer.GamePath.Length > 0 && Installer.GamePath.EndsWith(".exe"))Installer.GameFolderPath=Installer.GamePath.Substring(0, Installer.GamePath.Length - (Installer.GamePath.Length - Installer.GamePath.LastIndexOf('\\')));
+        if (Installer.GamePath.Length > 0 && Installer.GamePath.EndsWith(".exe"))Installer.GameFolderPath=Installer.GamePath.Substring(0, Installer.GamePath.Length - (Installer.GamePath.Length - Installer.GamePath.LastIndexOf(Path.DirectorySeparatorChar)));
     }
 
     private void SetStatus(string status)
