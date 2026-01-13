@@ -21,8 +21,8 @@ public partial class Installer : Window
     public static readonly string BepinZipURL = @"https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.4/BepInEx_win_x64_5.4.23.4.zip";
     public static readonly string[] GameDownloadURLs =
         {
-            @"https://ambatukam.xyz/ScavDemoV5PreTesting4.zip",
             @"https://www.dropbox.com/scl/fi/l1u836ltcxywkbx0wixyg/ScavDemoV5PreTesting4.zip?rlkey=fauga6kxpa67w7lo26d7o6tip&e=1&st=z4imhpug&dl=1",
+            @"https://ambatukam.xyz/ScavDemoV5PreTesting4.zip",
         };
     public Installer()
     {
@@ -129,8 +129,9 @@ public partial class Installer : Window
             {
                 Installer.BepinZipArchivePath=await FileOperations.DownloadArchive(Installer.BepinZipURL);
             }
-            catch(TimeoutException)
+            catch(Exception ex)
             {
+                MessageBox.Show($"Error while downloading BepInEx! Caught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 goto CancelInstallation;
             }
         }
@@ -139,8 +140,9 @@ public partial class Installer : Window
         {
             Installer.ModZipArchivePath=await FileOperations.DownloadArchive(Installer.ModZipURL);
         }
-        catch(TimeoutException)
+        catch(Exception ex)
         {
+            MessageBox.Show($"Error while downloading the multiplayer mod! Caught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
             goto CancelInstallation;
         }
         if(!String.IsNullOrEmpty(Installer.BepinZipArchivePath))
@@ -150,9 +152,13 @@ public partial class Installer : Window
         finalUnzipPaths.Add(Installer.ModZipArchivePath);
         this.SetStatus("Extracting archives...");
         string[] unpackedDirs = [];
-        if(!FileOperations.UnzipFiles(finalUnzipPaths.ToArray(), out unpackedDirs))
+        try
         {
-            MessageBox.Show("Error while unzipping mods! Ensure that your %TEMP% folder has write permissions!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            FileOperations.UnzipFiles(finalUnzipPaths.ToArray(), out unpackedDirs);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error while unzipping mods! Ensure that your %TEMP% folder has write permissions!\n\nCaught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
             goto CancelInstallation;
         }
         this.SetStatus("Moving files...");
