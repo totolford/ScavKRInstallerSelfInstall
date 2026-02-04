@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Documents.DocumentStructures;
 using System.Security.Cryptography;
 using System.Data;
+using System.Text;
 
 namespace ScavKRInstaller
 {
@@ -25,15 +26,19 @@ namespace ScavKRInstaller
                 if(File.Exists(possibleGamePath))
                 {
                     path = possibleGamePath;
+                    LogHandler.Instance.Write($"{path} is valid!");
                     return true;
                 }
+                LogHandler.Instance.Write($"Bad game folder path!");
                 throw new ArgumentException("Provided directory does not contain a game executable!");
             }
             if((attributes & FileAttributes.Archive) == FileAttributes.Archive)
             {
                 if(Path.GetFileName(path) == gameName) return true;
+                LogHandler.Instance.Write($"Bad game file path!");
                 throw new ArgumentException("Provided file is not a game executable!");
             }
+            LogHandler.Instance.Write($"{path} is invalid!");
             return false;
         }
         public static bool CheckIfSaveFilesPresent(out string[] saveFilePaths)
@@ -54,16 +59,26 @@ namespace ScavKRInstaller
                 foreach(string name in gameNames)
                 {
                     string path = appdataPath+Path.DirectorySeparatorChar+devName+Path.DirectorySeparatorChar+name+Path.DirectorySeparatorChar+savefileName;
-                    if(File.Exists(path)) resultPaths.Add(path);
-                    result=true;
+                    if(File.Exists(path))
+                    {
+                        resultPaths.Add(path);
+                        result=true;
+                    }
                 }
             }
             if(result)
             {
                 saveFilePaths=resultPaths.ToArray();
+                StringBuilder sb=new();
+                foreach(string path in saveFilePaths)
+                {
+                    sb.AppendJoin(' ', path);
+                }
+                LogHandler.Instance.Write($"Found savefiles: {sb.ToString()}");
                 return true;
             }
-            saveFilePaths= [];
+            saveFilePaths=[];
+            LogHandler.Instance.Write("No savefiles found");
             return false;
         }
 
@@ -89,6 +104,15 @@ namespace ScavKRInstaller
                 File.Delete(path);
                 hasDeleted=true;
             }
+            if(hasDeleted)
+            {
+                StringBuilder sb = new();
+                foreach(string path in paths)
+                {
+                    sb.AppendJoin(' ', path);
+                }
+                LogHandler.Instance.Write($"Deleted savefiles: {paths}");
+            }
             return hasDeleted;
         }
         private static string GetTempFolderPath()
@@ -103,14 +127,17 @@ namespace ScavKRInstaller
         }
         public static bool CheckForBepin(string gameFolder)
         {
+            LogHandler.Instance.Write($"Bepin located");
             return Directory.Exists(gameFolder+Path.DirectorySeparatorChar+"BepInEx");
         }
         public static bool CheckForMod(string gameFolder)
         {
+            LogHandler.Instance.Write($"Multiplayer mod located");
             return File.Exists(gameFolder+$"{Path.DirectorySeparatorChar}BepInEx{Path.DirectorySeparatorChar}plugins{Path.DirectorySeparatorChar}KrokoshaCasualtiesMP.dll");
         }
         public static async Task<string> TryGameDownload(string[] urls)
         {
+            LogHandler.Instance.Write("Trying to download the game");
             foreach(string url in urls)
             {
                 try
@@ -118,15 +145,18 @@ namespace ScavKRInstaller
                     string result = await FileOperations.DownloadArchive(url, true);
                     return result;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    LogHandler.Instance.Write($"Download from source {url} failed! | {ex.Message}");
                     continue;
                 }
             }
+            LogHandler.Instance.Write($"!!ALL SOURCES FAILED!!");
             throw new TimeoutException("All game download mirrors failed!");
         }
         public async static Task<string> DownloadArchive(string url, bool silentExceptions = false)
         {
+            LogHandler.Instance.Write($"Trying to download an archive: {url}");
             using HttpClient client = new();
             Uri uri = new(url);
             string filename = FileOperations.GetZipFilename(url);
@@ -141,26 +171,32 @@ namespace ScavKRInstaller
                     {
                         InvalidDataException ex = new InvalidDataException($"Checksum check failed on {fs.Name}! File has been deleted!");
                         ex.Data.Add("path", fs.Name);
+                        LogHandler.Instance.Write($"!!CHECKSUM CHECK ON {filename} FAILED!!");
                         throw ex;
                     };
+                    LogHandler.Instance.Write($"Downloaded {filename} successfully!");
                     return tempFolderFilePath;
                 }
             }
-            catch(InvalidCastException ex)
+            catch(InvalidDataException ex)
             {
                 File.Delete((string)ex.Data["path"]);
                 if(!silentExceptions) MessageBox.Show($"File by this path is corrupted and has been downloaded with an invalid checksum!\n\n{ex.Data}\n\nIf this error persists multiple times, contact the installer developer or consider manual installation!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw ex; //exception rethrow funny 
             }
             catch(TaskCanceledException ex) when(ex.InnerException is TimeoutException)
             {
                 if(!silentExceptions) MessageBox.Show($"Connection has timed while downloading {filename}! Ensure that github.com is reachable and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"!!TIMEOUT WHILE DOWNLOADING {filename}!!");
                 throw new TimeoutException();
             }
             catch(HttpRequestException ex)
             {
                 if(!silentExceptions) MessageBox.Show($"Could not connect to github while downloading {filename}! Ensure that github.com is reachable and try again.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"!!SERVER UNREACHABLE WHILE DOWNLOADING {filename}!!");
                 throw new TimeoutException();
             }
+            LogHandler.Instance.Write($"DownloadArchive Mystery Error!");
             throw new Exception($"Something really bad has happened while downloading {filename}!");
         }
         public static bool UnzipFiles(string[] zippedPaths, out string[] unzippedPaths)
@@ -174,10 +210,12 @@ namespace ScavKRInstaller
                 {
                     ZipFile.ExtractToDirectory(path, directoryPath);
                     result = true;
+                    LogHandler.Instance.Write($"Unzipped {path} to {directoryPath}");
                 }
                 catch(Exception ex) //he he i am sure i won't regret cutting corners later (i have indeed regretted doing this exact thing (fuck me))
                 {
                     unzippedPaths = [];
+                    LogHandler.Instance.Write($"!!EXCEPTION WHILE UNZIPPING!! | {ex.ToString()}");
                     return false;
                 }
                 paths.Add(directoryPath);
@@ -211,6 +249,7 @@ namespace ScavKRInstaller
         {
             static void CloneDirectory(string root, string dest)
             {
+                LogHandler.Instance.Write($"Cloning directory {root} to {dest}");
                 foreach(var directory in Directory.GetDirectories(root))
                 {
                     var newDirectory = Path.Combine(dest, Path.GetFileName(directory));
@@ -261,6 +300,7 @@ namespace ScavKRInstaller
             if (copiedFolders != paths.Length)
             {
                 MessageBox.Show("Files were only copied partially! This is very bad, and should never happen. If that's the case, you would want to do a complete reinstallation of the game. If the error persists on a fresh install, consider manual installation.", "Critical Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"!!!PARTIAL COPY ERROR CAUGHT!!!");
                 return false;
             }
             return true;
@@ -269,6 +309,7 @@ namespace ScavKRInstaller
         public static void DeleteTempFiles()
         {
             if(Directory.Exists(GetTempFolderPath())) Directory.Delete(GetTempFolderPath(), true);
+            LogHandler.Instance.Write($"Cleared temp files");
         }
     }
 }

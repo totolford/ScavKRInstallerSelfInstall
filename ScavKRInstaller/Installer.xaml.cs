@@ -24,6 +24,8 @@ public partial class Installer : Window
             @"https://www.dropbox.com/scl/fi/l1u836ltcxywkbx0wixyg/ScavDemoV5PreTesting4.zip?rlkey=fauga6kxpa67w7lo26d7o6tip&e=1&st=z4imhpug&dl=1",
             @"https://ambatukam.xyz/ScavDemoV5PreTesting4.zip",
         };
+    private static Logger Log = LogHandler.Instance;
+    private Log logWindow = null;
     public Installer()
     {
         InitializeComponent();
@@ -85,6 +87,7 @@ public partial class Installer : Window
     }
     private async void ButtonInstall_Click(object sender, RoutedEventArgs e)
     {
+        LogHandler.Instance.Write($"BEGIN: Initiating installation");
         this.CheckBoxDownloadGame.IsEnabled=false;
         this.CheckBoxSavefileDelete.IsEnabled=false;
         this.ButtonInstall.IsEnabled=false;
@@ -99,6 +102,7 @@ public partial class Installer : Window
         if(!ready)
         {
             MessageBox.Show("Game path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogHandler.Instance.Write($"CANCEL: invalid path");
             goto CancelInstallation;
         }
         if((bool)this.CheckBoxDownloadGame.IsChecked)
@@ -111,13 +115,19 @@ public partial class Installer : Window
             catch (TimeoutException ex)
             {
                 MessageBox.Show("Failed to download the game from multiple mirrors!\n\nTry again and consider acquiring the game manually if this fails multiple times.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"CANCEL: all mirrors are bust!");
                 goto CancelInstallation;
             }
         }
         if(FileOperations.CheckForMod(Installer.GameFolderPath))
         {
             MessageBoxResult msgBoxModAlreadyInstalled = MessageBox.Show("Looks like the mod is already installed!\n\nInstaller is going to download and install the latest version of the mod from github.\n\nContinue?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if(msgBoxModAlreadyInstalled == MessageBoxResult.No) goto CancelInstallation;
+            if(msgBoxModAlreadyInstalled == MessageBoxResult.No)
+            {
+                LogHandler.Instance.Write($"Did not want to update"); 
+                goto CancelInstallation;
+            }
+            LogHandler.Instance.Write($"Agreed to update");
         }
         if((bool)this.CheckBoxSavefileDelete.IsChecked)
         {
@@ -133,6 +143,7 @@ public partial class Installer : Window
             catch(Exception ex)
             {
                 MessageBox.Show($"Error while downloading BepInEx! Caught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"CANCEL: Bepin fail: {ex.ToString()}");
                 goto CancelInstallation;
             }
         }
@@ -144,6 +155,7 @@ public partial class Installer : Window
         catch(Exception ex)
         {
             MessageBox.Show($"Error while downloading the multiplayer mod! Caught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogHandler.Instance.Write($"CANCEL: Mod fail: {ex.ToString()}");
             goto CancelInstallation;
         }
         if(!String.IsNullOrEmpty(Installer.BepinZipArchivePath))
@@ -160,18 +172,24 @@ public partial class Installer : Window
         catch (Exception ex)
         {
             MessageBox.Show($"Error while unzipping mods! Ensure that your %TEMP% folder has write permissions!\n\nCaught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogHandler.Instance.Write($"CANCEL: Zip fail: {ex.ToString()}");
             goto CancelInstallation;
         }
         this.SetStatus("Moving files...");
         if(!FileOperations.HandleCopyingFiles(unpackedDirs))
         {
             MessageBox.Show("Error while copying files to the game folder! Ensure that your game folder has write permissions!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogHandler.Instance.Write($"CANCEL: Copy fail.");
             goto CancelInstallation;
         }
         this.SetStatus("Done!");
+        LogHandler.Instance.Write($"DONE: Success!");
         MessageBoxResult msgBoxFinished = MessageBox.Show($"{((bool)this.CheckBoxDownloadGame.IsChecked?"Modded game":"Mod")} has been succesfully installed! Don't forget to delete this installer.\n\nLaunch the game?", "Message", MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if(msgBoxFinished == MessageBoxResult.Yes) Process.Start(new ProcessStartInfo(Installer.GamePath));
-        Environment.Exit(0);
+        if(msgBoxFinished == MessageBoxResult.Yes)
+        {
+            Process.Start(new ProcessStartInfo(Installer.GamePath));
+            Environment.Exit(0);
+        }
     CancelInstallation:
         {
             this.CheckBoxDownloadGame.IsEnabled=true;
@@ -187,6 +205,10 @@ public partial class Installer : Window
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+        if(Application.Current.Windows.OfType<Log>().Count() > 0)
+        {
+            Application.Current.Windows.OfType<Log>().FirstOrDefault().Close();
+        }
         FileOperations.DeleteTempFiles();
     }
 
@@ -206,5 +228,26 @@ public partial class Installer : Window
     private void CheckBoxDownloadGame_Checked(object sender, RoutedEventArgs e)
     {
         
+    }
+
+    private void ButtonOpenLog_Click(object sender, RoutedEventArgs e)
+    {
+        if(this.logWindow==null)
+        {
+            this.logWindow=new Log(Log);
+            logWindow.Show();
+        }
+        else
+        {
+            if(Application.Current.Windows.OfType<Log>().Count() > 0)
+            {
+                this.logWindow.Activate();
+            }
+            else
+            {
+                this.logWindow=new Log(Log);
+                logWindow.Show();
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@ namespace ScavKRInstaller
 {
     public static class Constants
     {
-        public static string Version = "1.1.15";
+        public static string Version = "1.1.16";
         public static string[] GetSplash()
         {
             string[] Splashes = 
@@ -39,7 +39,12 @@ namespace ScavKRInstaller
                 "Don't break your claws",
                 "Bones are surprisingly fragile",
                 "I want to rewrite this on c",
-                $"I know you, {Environment.UserName}"
+                $"I know you, {Environment.UserName}",
+                "Ketchup Intravenously",
+                "Thanks losyrr!",
+                "Thanks GaryTheCat!",
+                "Go play Desecrators",
+                "Go play CleanFall"
             };
             return Splashes;
         }
