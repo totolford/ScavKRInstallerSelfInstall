@@ -9,7 +9,7 @@ namespace ScavKRInstaller
 {
     public static class Constants
     {
-        public static string Version = "1.1.16";
+        public static string Version = "1.1.17";
         public static string[] GetSplash()
         {
             string[] Splashes = 

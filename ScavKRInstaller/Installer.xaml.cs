@@ -24,8 +24,10 @@ public partial class Installer : Window
             @"https://www.dropbox.com/scl/fi/l1u836ltcxywkbx0wixyg/ScavDemoV5PreTesting4.zip?rlkey=fauga6kxpa67w7lo26d7o6tip&e=1&st=z4imhpug&dl=1",
             @"https://ambatukam.xyz/ScavDemoV5PreTesting4.zip",
         };
-    private static Logger Log = LogHandler.Instance;
+    public static bool InDownloadMode;
+    private string providedPath;
     private Log logWindow = null;
+
     public Installer()
     {
         InitializeComponent();
@@ -34,7 +36,7 @@ public partial class Installer : Window
         {
             Installer.SaveFilePaths=saveFilePaths;
         }
-        FileOperations.DeleteTempFiles(); 
+        FileOperations.DeleteTempFiles();
         Window.GetWindow(this).Title = $"Scav Krokosha Multiplayer Installer rev. {Constants.Version}: {Constants.GetSplash()[Random.Shared.Next(0, Constants.GetSplash().Length)]}";
     }
 
@@ -77,8 +79,7 @@ public partial class Installer : Window
 
     private void TextBoxGamePath_TextChanged(object sender, TextChangedEventArgs e)
     {
-        Installer.GamePath=this.TextBoxGamePath.Text;
-        if (Installer.GamePath.Length > 0 && Installer.GamePath.EndsWith(".exe"))Installer.GameFolderPath=Installer.GamePath.Substring(0, Installer.GamePath.Length - (Installer.GamePath.Length - Installer.GamePath.LastIndexOf(Path.DirectorySeparatorChar)));
+        this.providedPath = this.TextBoxGamePath.Text;
     }
 
     private void SetStatus(string status)
@@ -93,15 +94,14 @@ public partial class Installer : Window
         this.ButtonInstall.IsEnabled=false;
         this.ButtonBrowsePath.IsEnabled=false;
         this.TextBoxGamePath.IsEnabled=false;
-        List<string> finalUnzipPaths=new();
-        var readyChecks = new Func<bool>[]
+        List<string> finalUnzipPaths = new();
+        try
         {
-            () => !String.IsNullOrEmpty(Installer.GamePath),
-        };
-        bool ready = readyChecks.All(x => x());
-        if(!ready)
+            FileOperations.HandleProvidedGamePath(ref this.providedPath);
+        }
+        catch
         {
-            MessageBox.Show("Game path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Provided path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
             LogHandler.Instance.Write($"CANCEL: invalid path");
             goto CancelInstallation;
         }
@@ -112,7 +112,7 @@ public partial class Installer : Window
                 this.SetStatus("Downloading the game, please wait!");
                 finalUnzipPaths.Add(await FileOperations.TryGameDownload(Installer.GameDownloadURLs));
             }
-            catch (TimeoutException ex)
+            catch(TimeoutException ex)
             {
                 MessageBox.Show("Failed to download the game from multiple mirrors!\n\nTry again and consider acquiring the game manually if this fails multiple times.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 LogHandler.Instance.Write($"CANCEL: all mirrors are bust!");
@@ -124,7 +124,7 @@ public partial class Installer : Window
             MessageBoxResult msgBoxModAlreadyInstalled = MessageBox.Show("Looks like the mod is already installed!\n\nInstaller is going to download and install the latest version of the mod from github.\n\nContinue?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if(msgBoxModAlreadyInstalled == MessageBoxResult.No)
             {
-                LogHandler.Instance.Write($"Did not want to update"); 
+                LogHandler.Instance.Write($"DONE: Did not want to update");
                 goto CancelInstallation;
             }
             LogHandler.Instance.Write($"Agreed to update");
@@ -169,7 +169,7 @@ public partial class Installer : Window
         {
             FileOperations.UnzipFiles(finalUnzipPaths.ToArray(), out unpackedDirs);
         }
-        catch (Exception ex)
+        catch(Exception ex)
         {
             MessageBox.Show($"Error while unzipping mods! Ensure that your %TEMP% folder has write permissions!\n\nCaught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
             LogHandler.Instance.Write($"CANCEL: Zip fail: {ex.ToString()}");
@@ -184,7 +184,7 @@ public partial class Installer : Window
         }
         this.SetStatus("Done!");
         LogHandler.Instance.Write($"DONE: Success!");
-        MessageBoxResult msgBoxFinished = MessageBox.Show($"{((bool)this.CheckBoxDownloadGame.IsChecked?"Modded game":"Mod")} has been succesfully installed! Don't forget to delete this installer.\n\nLaunch the game?", "Message", MessageBoxButton.YesNo, MessageBoxImage.Information);
+        MessageBoxResult msgBoxFinished = MessageBox.Show($"{((bool)this.CheckBoxDownloadGame.IsChecked ? "Modded game" : "Mod")} has been succesfully installed! Don't forget to delete this installer.\n\nLaunch the game?", "Message", MessageBoxButton.YesNo, MessageBoxImage.Information);
         if(msgBoxFinished == MessageBoxResult.Yes)
         {
             Process.Start(new ProcessStartInfo(Installer.GamePath));
@@ -198,11 +198,18 @@ public partial class Installer : Window
             this.ButtonBrowsePath.IsEnabled=true;
             this.TextBoxGamePath.IsEnabled=true;
             this.ButtonInstall.Content="Install";
+            ClearStatics();
             FileOperations.DeleteTempFiles();
             return;
         }
     }
-
+    public static void ClearStatics()
+    {
+        Installer.GameFolderPath="";
+        Installer.GamePath="";
+        Installer.BepinZipArchivePath="";
+        Installer.ModZipArchivePath="";
+    }
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         if(Application.Current.Windows.OfType<Log>().Count() > 0)
@@ -227,14 +234,14 @@ public partial class Installer : Window
 
     private void CheckBoxDownloadGame_Checked(object sender, RoutedEventArgs e)
     {
-        
+        Installer.InDownloadMode = CheckBoxDownloadGame.IsChecked.Value;
     }
 
     private void ButtonOpenLog_Click(object sender, RoutedEventArgs e)
     {
         if(this.logWindow==null)
         {
-            this.logWindow=new Log(Log);
+            this.logWindow=new Log(LogHandler.Instance);
             logWindow.Show();
         }
         else
@@ -245,7 +252,7 @@ public partial class Installer : Window
             }
             else
             {
-                this.logWindow=new Log(Log);
+                this.logWindow=new Log(LogHandler.Instance);
                 logWindow.Show();
             }
         }

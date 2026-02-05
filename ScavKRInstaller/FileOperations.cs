@@ -19,14 +19,29 @@ namespace ScavKRInstaller
         public static bool HandleProvidedGamePath(ref string path)
         {
             string gameName = GameName;
+            if (!File.Exists(path)&&!Directory.Exists(path))
+            {
+                Installer.GameFolderPath = "";
+                Installer.GamePath = "";
+                LogHandler.Instance.Write($"File/dir path does not exist!!");
+                throw new ArgumentException("Provided directory or file does not exist!");
+            }
             FileAttributes attributes = File.GetAttributes(path);
             if((attributes & FileAttributes.Directory) == FileAttributes.Directory)
             {
                 string possibleGamePath = path+Path.DirectorySeparatorChar+gameName;
                 if(File.Exists(possibleGamePath))
                 {
-                    path = possibleGamePath;
+                    path=possibleGamePath;
                     LogHandler.Instance.Write($"{path} is valid!");
+                    Installer.GamePath=possibleGamePath;
+                    Installer.GameFolderPath=Path.GetDirectoryName(possibleGamePath);
+                    return true;
+                }
+                else if (Installer.InDownloadMode)
+                {
+                    LogHandler.Instance.Write($"{path} is a valid download target!");
+                    Installer.GameFolderPath=path;
                     return true;
                 }
                 LogHandler.Instance.Write($"Bad game folder path!");
@@ -34,12 +49,18 @@ namespace ScavKRInstaller
             }
             if((attributes & FileAttributes.Archive) == FileAttributes.Archive)
             {
-                if(Path.GetFileName(path) == gameName) return true;
+                if(Path.GetFileName(path) == gameName)
+                {
+                    Installer.GamePath=path;
+                    Installer.GameFolderPath=Path.GetDirectoryName(path);
+                    LogHandler.Instance.Write($"{path} is valid mod installation target!");
+                    return true;
+                }
                 LogHandler.Instance.Write($"Bad game file path!");
                 throw new ArgumentException("Provided file is not a game executable!");
             }
             LogHandler.Instance.Write($"{path} is invalid!");
-            return false;
+            throw new ArgumentException("Game path mystery error!");
         }
         public static bool CheckIfSaveFilesPresent(out string[] saveFilePaths)
         {
