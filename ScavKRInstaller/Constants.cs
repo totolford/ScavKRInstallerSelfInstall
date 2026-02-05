@@ -9,10 +9,10 @@ namespace ScavKRInstaller
 {
     public static class Constants
     {
-        public static string Version = "1.1.18";
+        public static string Version = "1.1.19";
         public static string[] GetSplash()
         {
-            string[] Splashes = 
+            string[] Splashes = //31 chars max
             {
                 "FENTANYL: ADMINISTERED",
                 "I don't feel my legs!",
@@ -45,7 +45,12 @@ namespace ScavKRInstaller
                 "Thanks GaryTheCat!",
                 "Thanks Arcarnisan!",
                 "Go play Desecrators",
-                "Go play CleanFall"
+                "Go play CleanFall",
+                "3 turbulence crystals",
+                "Eat your friends!",
+                "Push your friends onto mines!",
+                "Inject drugs into your friends!",
+                "Soda (3049mL), Fentanyl (364mL)"
             };
             return Splashes;
         }

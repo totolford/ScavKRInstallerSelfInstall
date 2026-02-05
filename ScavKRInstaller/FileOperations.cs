@@ -13,16 +13,21 @@ namespace ScavKRInstaller
 {
     public static class FileOperations
     {
-        private const string GameName = "CasualtiesUnknown.exe";
-        private const string DevName = "Orsoniks";
-        private const string SavefileName = "save.sv";
+        private const string GameName="CasualtiesUnknown.exe";
+        private const string DevName="Orsoniks";
+        private const string SavefileName="save.sv";
         public static bool HandleProvidedGamePath(ref string path)
         {
-            string gameName = GameName;
+            string gameName=GameName;
+            if (!path.All(char.IsAscii))
+            {
+                LogHandler.Instance.Write($"Path contains non-latin characters.");
+                throw new ArgumentException("Non-latin characters in the gamepath!");
+            }
             if (!File.Exists(path)&&!Directory.Exists(path))
             {
-                Installer.GameFolderPath = "";
-                Installer.GamePath = "";
+                Installer.GameFolderPath="";
+                Installer.GamePath="";
                 LogHandler.Instance.Write($"File/dir path does not exist!!");
                 throw new ArgumentException("Provided directory or file does not exist!");
             }
@@ -71,15 +76,15 @@ namespace ScavKRInstaller
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), //Although, it wouldn't hurt to check other folders too
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) //Just in case
             };
-            string devName = DevName;
-            string[] gameNames = GetGameNames(); //Before beta 4, game saved to CasualtiesUnknownDemo. We'll clean both in case it changes again.
-            string savefileName = SavefileName;
-            bool result = false;
+            string devName=DevName;
+            string[] gameNames=GetGameNames(); //Before beta 4, game saved to CasualtiesUnknownDemo. We'll clean both in case it changes again.
+            string savefileName=SavefileName;
+            bool result=false;
             foreach(string appdataPath in appdataPaths)
             {
                 foreach(string name in gameNames)
                 {
-                    string path = appdataPath+Path.DirectorySeparatorChar+devName+Path.DirectorySeparatorChar+name+Path.DirectorySeparatorChar+savefileName;
+                    string path=appdataPath+Path.DirectorySeparatorChar+devName+Path.DirectorySeparatorChar+name+Path.DirectorySeparatorChar+savefileName;
                     if(File.Exists(path))
                     {
                         resultPaths.Add(path);

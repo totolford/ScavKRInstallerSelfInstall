@@ -95,14 +95,15 @@ public partial class Installer : Window
         this.ButtonInstall.IsEnabled=false;
         this.ButtonBrowsePath.IsEnabled=false;
         this.TextBoxGamePath.IsEnabled=false;
-        List<string> finalUnzipPaths = new();
+        List<string> finalUnzipPaths=new();
         try
         {
             FileOperations.HandleProvidedGamePath(ref this.providedPath);
         }
-        catch
+        catch(Exception ex)
         {
-            MessageBox.Show("Provided path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            if (ex.Message=="Non-latin characters in the gamepath!") MessageBox.Show("Provided path contains non-latin characters! For the mod to function properly, path should be english-only.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+            else MessageBox.Show("Provided path is invalid!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
             LogHandler.Instance.Write($"CANCEL: invalid path");
             goto CancelInstallation;
         }

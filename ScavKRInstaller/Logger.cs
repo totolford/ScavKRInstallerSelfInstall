@@ -43,7 +43,7 @@ namespace ScavKRInstaller
             {
                 sb.AppendLine(entry.ToString());
             }
-            return string.Concat(sb.ToString().AsSpan(0, sb.Length-2), "\n");
+            return string.Concat(sb.ToString(), "\n");
         }
     }
     public class LogEntry
