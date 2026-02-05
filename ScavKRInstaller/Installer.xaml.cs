@@ -23,6 +23,7 @@ public partial class Installer : Window
         {
             @"https://www.dropbox.com/scl/fi/l1u836ltcxywkbx0wixyg/ScavDemoV5PreTesting4.zip?rlkey=fauga6kxpa67w7lo26d7o6tip&e=1&st=z4imhpug&dl=1",
             @"https://ambatukam.xyz/ScavDemoV5PreTesting4.zip",
+            @"https://yoink.cat-bot.de/static/ScavDemoV5PreTesting4.zip",
         };
     public static bool InDownloadMode;
     private string providedPath;
