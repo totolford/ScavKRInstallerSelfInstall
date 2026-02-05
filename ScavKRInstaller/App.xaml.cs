@@ -13,12 +13,13 @@ public partial class App : Application
 {
     private void Application_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
+        LogHandler.Instance.Write("#!UNHANDLED EXCEPTION CRASH!#");
         try
         {
             Exception ex = e.Exception;
             string filename = $"INSTALLER_LOG_{DateTime.Now.Ticks.ToString()}.txt";
             string path = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)+Path.DirectorySeparatorChar+filename;
-            File.WriteAllText(path, ex.ToString());
+            File.WriteAllText(path, ex.ToString()+$"\n\nLOG START\n\n{LogHandler.Instance.GetWholeLog()}");
             MessageBoxResult result = MessageBox.Show($"A very bad thing has occurred! Read through this carefully:\nThe installer has run into a critical, unexpected problem.\nIf this message shows up when running the executable for the first time, ensure that you have .NET 8.0 desktop runtime installed. Press \"OK\" (or the translated equivalent) button below to open the .NET desktop runtime installer download page.\n\nIf this has happened DURING execution and if you have .NET desktop runtime installed, a log file has been created on your desktop containing the information about the error ({filename}). If you actually want your issue to be addressed, contact the developer via github or other means and forward them the log.", "Critical error!", MessageBoxButton.OKCancel, MessageBoxImage.Error, MessageBoxResult.Cancel);
             if(result == MessageBoxResult.OK) Process.Start(new ProcessStartInfo(@"https://dotnet.microsoft.com/en-us/download/dotnet/8.0") { UseShellExecute = true});
         }
