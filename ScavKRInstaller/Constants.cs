@@ -9,7 +9,7 @@ namespace ScavKRInstaller
 {
     public static class Constants
     {
-        public static readonly string Version = "1.1.20";
+        public static readonly string Version = "1.1.10";
         public static readonly string GameName = "CasualtiesUnknown.exe";
         public static readonly string DevName = "Orsoniks";
         public static readonly string SavefileName = "save.sv";
