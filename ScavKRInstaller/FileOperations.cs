@@ -16,11 +16,13 @@ namespace ScavKRInstaller
         private static string GameZipFilename="";
         private static string BepinZipFilename="";
         private static string ModZipFilename="";
+        private static string ChangeSkinFilename="";
         public static void DiscoverFilenames()
         {
             GameZipFilename=GetZipFilename(Constants.GameDownloadURLs);
             BepinZipFilename=GetZipFilename(Constants.BepinZipURL);
             ModZipFilename=GetZipFilename(Constants.ModZipURL);
+            ChangeSkinFilename=GetZipFilename(Constants.ChangeSkinURL);
         }
         public static string GetZipFilename(string[] urls)
         {
@@ -177,6 +179,11 @@ namespace ScavKRInstaller
             LogHandler.Instance.Write($"Multiplayer mod located");
             return File.Exists(gameFolder+$"{Path.DirectorySeparatorChar}BepInEx{Path.DirectorySeparatorChar}plugins{Path.DirectorySeparatorChar}KrokoshaCasualtiesMP.dll");
         }
+        public static bool CheckForSkinMod(string gameFolder)
+        {
+            LogHandler.Instance.Write($"SkinChange located");
+            return File.Exists(gameFolder+$"{Path.DirectorySeparatorChar}BepInEx{Path.DirectorySeparatorChar}plugins{Path.DirectorySeparatorChar}ChangeSkin.dll");
+        }
         public static async Task<string> TryGameDownload(string[] urls)
         {
             LogHandler.Instance.Write("Trying to download the game");
@@ -223,7 +230,7 @@ namespace ScavKRInstaller
             catch(InvalidDataException ex)
             {
                 File.Delete((string)ex.Data["path"]);
-                if(!silentExceptions) MessageBox.Show($"File by this path is corrupted and has been downloaded with an invalid checksum!\n\n{ex.Data}\n\nIf this error persists multiple times, contact the installer developer or consider manual installation!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                if(!silentExceptions) MessageBox.Show($"File by this path is corrupted and has been downloaded with an invalid checksum!\n\n{ex.Data["path"]}\n\nIf this error persists multiple times, contact the installer developer or consider manual installation!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw new InvalidDataException($"Checksum check failed on {ex.Data["path"]}! File has been deleted!", ex); //well, i really want to rethrow here but i'd rather go with 2 exceptions than a fucked up stack. this is kinda bad
             }
             catch(TaskCanceledException ex) when(ex.InnerException is TimeoutException)
@@ -279,7 +286,7 @@ namespace ScavKRInstaller
                 {
                     return Constants.GetArchiveChecksums()[Constants.ArchiveType.Bepin].SequenceEqual(SHA);
                 }
-                if(path.Contains(ModZipFilename))
+                if(path.Contains(ModZipFilename) || path.Contains(ChangeSkinFilename))
                 {
                     return true; //probably the only thing that does change
                                  //fuck me dude we need a proper remote checksum generator
@@ -335,6 +342,12 @@ namespace ScavKRInstaller
                     string[] dirs = Directory.GetDirectories(path);
                     string finalModPath = dirs[0];
                     CloneDirectory(finalModPath, Installer.GameFolderPath);
+                    copiedFolders++;
+                    continue;
+                }
+                if(Installer.ChangeSkinArchivePath.Contains(targetFolder))
+                {
+                    CloneDirectory(path, Installer.GameFolderPath+Path.DirectorySeparatorChar+"BepInEx"+Path.DirectorySeparatorChar+"plugins");
                     copiedFolders++;
                     continue;
                 }

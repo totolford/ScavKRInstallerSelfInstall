@@ -17,6 +17,7 @@ public partial class Installer : Window
     public static string[] SaveFilePaths = [];
     public static string ModZipArchivePath = "";
     public static string BepinZipArchivePath = "";
+    public static string ChangeSkinArchivePath = "";
     private string providedPath = "";
     public static bool InDownloadMode = true;
     private Log logWindow = null;
@@ -85,6 +86,7 @@ public partial class Installer : Window
         LogHandler.Instance.Write($"BEGIN: Initiating installation");
         this.CheckBoxDownloadGame.IsEnabled=false;
         this.CheckBoxSavefileDelete.IsEnabled=false;
+        this.CheckBoxChangeSkinInstall.IsEnabled=false;
         this.ButtonInstall.IsEnabled=false;
         this.ButtonBrowsePath.IsEnabled=false;
         this.TextBoxGamePath.IsEnabled=false;
@@ -124,6 +126,19 @@ public partial class Installer : Window
             }
             LogHandler.Instance.Write($"Agreed to update");
         }
+        if(this.CheckBoxChangeSkinInstall.IsChecked.Value)
+        {
+            try
+            {
+                this.SetStatus("Downloading ChangeSkin...");
+                Installer.ChangeSkinArchivePath=await FileOperations.DownloadArchive(Constants.ChangeSkinURL);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show($"Error while downloading ChangeSkin mod!\nContact the developer if the issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHandler.Instance.Write($"SKIP: Bepin fail: {ex.ToString()}");
+            }
+        }
         if((bool)this.CheckBoxSavefileDelete.IsChecked)
         {
             FileOperations.DeleteSavefiles(Installer.SaveFilePaths);
@@ -137,7 +152,7 @@ public partial class Installer : Window
             }
             catch(Exception ex)
             {
-                MessageBox.Show($"Error while downloading BepInEx! Caught exception:\n{ex.Message}\n{ex.StackTrace}\n\nContact the developer if issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error while downloading BepInEx!\nContact the developer if the issue persists!", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
                 LogHandler.Instance.Write($"CANCEL: Bepin fail: {ex.ToString()}");
                 goto CancelInstallation;
             }
@@ -156,6 +171,10 @@ public partial class Installer : Window
         if(!String.IsNullOrEmpty(Installer.BepinZipArchivePath))
         {
             finalUnzipPaths.Add(Installer.BepinZipArchivePath);
+        }
+        if(!String.IsNullOrEmpty(Installer.ChangeSkinArchivePath))
+        {
+            finalUnzipPaths.Add(Installer.ChangeSkinArchivePath);
         }
         finalUnzipPaths.Add(Installer.ModZipArchivePath);
         this.SetStatus("Extracting archives...");
