@@ -6,37 +6,35 @@ Ce projet est un fork de [danxnader/ScavKRInstaller](https://github.com/danxnade
 
 ### Ce qui change par rapport a la version officielle
 
-- Suppression du GUI de l'installeur: execution 100% automatique des le lancement.
+- GUI supprime: installation 100% automatique au lancement.
 - Dossier d'installation force: `C:\Users\<user>\Downloads\scavMULTI`.
-- Structure de fichiers aplatit au maximum pour correspondre a `CasualtiesUnknownDemo` (pas de sous-dossiers inutiles).
-- Telechargements techniques dans `C:\Users\<user>\Downloads\ScavKRInstaller` puis suppression automatique des fichiers `.zip` et temporaires en fin d'installation.
-- Installation automatique de:
-  - le jeu (archive demo),
-  - BepInEx,
-  - le mod multijoueur,
-  - ChangeSkin.
-- Patch automatique de `BepInEx\plugins\KrokoshaCasualtiesMP.dll`:
-  - texte du menu principal personnalise (FR + EN),
-  - valeurs de connexion par defaut:
-    - serveur: `26.35.34.177:7790`
-    - nom joueur: `grosFemboyFurry`
-    - mot de passe: vide
-- Lancement automatique du jeu apres installation avec auto-connexion.
-- Creation d'un script local `Launch_AutoConnect.bat` dans le dossier du jeu.
-- Creation d'un raccourci bureau `scavMULTI.lnk` pour connexion rapide guest.
-  - Le launcher lance une connexion client directe avec le nom `grosFemboyFurry`.
-- Installation automatique d'une alternative open source a Radmin VPN:
-  - OpenVPN Community (installation silencieuse).
-  - Le launcher demarre OpenVPN en meme temps que le jeu et le ferme a la fermeture du jeu.
-  - Fichiers generes dans le jeu:
-    - `VPN_GUEST_INFO.txt` (adresse `26.35.34.177`, mot de passe `123`)
-    - `vpn\credentials.txt` (guest/123)
-    - `vpn\guest.ovpn.template` (template de profil)
+- Telechargements temporaires: `C:\Users\<user>\Downloads\ScavKRInstaller` puis suppression des fichiers temporaires en fin d'installation.
+- Installation automatique du jeu demo, de BepInEx, du mod multijoueur et de ChangeSkin.
+- Patch automatique de `BepInEx\plugins\KrokoshaCasualtiesMP.dll` avec:
+  - IP/port par defaut: `26.35.34.177:7790`
+  - mot de passe par defaut: `123`
+  - nom joueur guest par defaut: `grosFemboyFurry`
+  - texte menu personnalise (FR + EN)
+- Lancement automatique apres installation avec creation de:
+  - `Launch_AutoConnect.ps1`
+  - `Launch_AutoConnect.bat`
+  - raccourci Bureau `scavMULTI.lnk` avec l'icone du jeu
+- Au lancement du jeu, demande Host/Guest a chaque fois:
+  - Host: nom force a `furry`, detection IP locale (priorite aux IP `26.x.x.x`), copie auto dans le presse-papiers et popup d'information.
+  - Guest: demande l'IP du serveur dans une popup, ajoute le port `7790` si non fourni.
+- Integration OpenVPN Community:
+  - tentative de lancement OpenVPN en meme temps que le jeu
+  - fermeture OpenVPN a la fermeture du jeu
+  - generation de `VPN_GUEST_INFO.txt`, `vpn\credentials.txt`, `vpn\guest.ovpn.template`
+- Robustesse amelioree:
+  - fermeture des process jeu en cours avant mise a jour des fichiers
+  - copie de fichiers avec retries en cas de DLL verrouillee
+  - log de lancement `Launch_AutoConnect.log` + popup explicite si erreur de lancement
 
 ### Notes
 
-- L'installation OpenVPN depend des droits machine (admin Windows).
-- Ce fork est oriente usage automatise, pas interface utilisateur.
+- L'installation OpenVPN peut necessiter les droits administrateur Windows.
+- Si un host/guest ne demarre pas, verifier `Launch_AutoConnect.log` dans le dossier du jeu.
 
 ## English
 
@@ -44,34 +42,32 @@ This project is a fork of [danxnader/ScavKRInstaller](https://github.com/danxnad
 
 ### What changed compared to the official version
 
-- Installer GUI removed: fully automatic execution on launch.
+- GUI removed: fully automatic installer on launch.
 - Forced install directory: `C:\Users\<user>\Downloads\scavMULTI`.
-- Folder layout is flattened as much as possible to match `CasualtiesUnknownDemo` (no unnecessary nested folders).
-- Technical downloads are stored in `C:\Users\<user>\Downloads\ScavKRInstaller`, then `.zip` and temp files are deleted automatically at the end.
-- Automatic installation of:
-  - game demo archive,
-  - BepInEx,
-  - multiplayer mod,
-  - ChangeSkin.
-- Automatic patching of `BepInEx\plugins\KrokoshaCasualtiesMP.dll`:
-  - custom main menu text (FR + EN),
-  - default connection values:
-    - server: `26.35.34.177:7790`
-    - player name: `grosFemboyFurry`
-    - password: empty (guests choose their own)
-- Game is launched automatically after install with auto-connect arguments.
-- Creates `Launch_AutoConnect.bat` in the game folder.
-- Creates desktop shortcut `scavMULTI.lnk` for quick guest connection.
-  - The launcher starts direct client connection with name `grosFemboyFurry`.
-- Automatically installs an open-source alternative to Radmin VPN:
-  - OpenVPN Community (silent install).
-  - The launcher starts OpenVPN together with the game and stops it when the game closes.
-  - Generated game files:
-    - `VPN_GUEST_INFO.txt` (address `26.35.34.177`, password `123`)
-    - `vpn\credentials.txt` (guest/123)
-    - `vpn\guest.ovpn.template` (profile template)
+- Temporary downloads path: `C:\Users\<user>\Downloads\ScavKRInstaller`, then temp files are deleted at the end.
+- Automatic installation of game demo, BepInEx, multiplayer mod, and ChangeSkin.
+- Automatic patching of `BepInEx\plugins\KrokoshaCasualtiesMP.dll` with:
+  - default IP/port: `26.35.34.177:7790`
+  - default password: `123`
+  - default guest player name: `grosFemboyFurry`
+  - custom main menu text (FR + EN)
+- Automatic post-install launch and creation of:
+  - `Launch_AutoConnect.ps1`
+  - `Launch_AutoConnect.bat`
+  - desktop shortcut `scavMULTI.lnk` using the game icon
+- Host/Guest prompt on every game launch:
+  - Host: forced name `furry`, local IP detection (prefers `26.x.x.x`), automatic clipboard copy, and info popup.
+  - Guest: popup asks for server IP, adds port `7790` if not provided.
+- OpenVPN Community integration:
+  - tries to start OpenVPN together with the game
+  - stops OpenVPN when the game exits
+  - generates `VPN_GUEST_INFO.txt`, `vpn\credentials.txt`, `vpn\guest.ovpn.template`
+- Improved reliability:
+  - closes running game processes before updating files
+  - file copy retries for locked DLL scenarios
+  - launcher log file `Launch_AutoConnect.log` + explicit startup error popup
 
 ### Notes
 
-- OpenVPN installation depends on machine privileges (Windows admin rights).
-- This fork is focused on automation, not interactive UI.
+- OpenVPN installation may require Windows admin privileges.
+- If host/guest startup fails, check `Launch_AutoConnect.log` in the game folder.
