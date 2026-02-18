@@ -11,6 +11,17 @@ public static class ModTextPatcher
 
     private const string HeaderReplacement = "Salut / Hello";
     private const string BodyReplacement = "Salut, ceci est un fork du mod https://github.com/danxnader/ScavKRInstaller permettant de lancer l'installation sans GUI avec une connexion automatique a un serveur au choix.\n\nHello, this is a fork of the mod https://github.com/danxnader/ScavKRInstaller that allows launching installation without GUI and with automatic connection to a server of your choice.";
+    private const string ConsoleDisabledSvCheatsOriginal = "Console commands disabled. (sv_cheats is False)";
+    private const string ConsoleDisabledByRulesOriginal = "Console commands disabled. (by the server rules)";
+    private const string UnknownCommandOriginal = "Unknown command (btw co-op mod patch is active)";
+    private const string ModdedCommandsHeaderMarker = "NOW MODDED COMMANDS";
+    private const string ChatHelpOriginalPrefix = "Main commands:";
+
+    private const string ConsoleDisabledSvCheatsReplacement = "Console disabled (sv_cheats=false). Host: enable cheats first, then use 'krok help'.";
+    private const string ConsoleDisabledByRulesReplacement = "Console command blocked by server rules. Host can review rules with: krok rules";
+    private const string UnknownCommandReplacement = "Unknown command. Try: krok help";
+    private const string ModdedCommandsHeaderReplacement = "\n//  MULTIPLAYER COMMANDS / COMMANDES MP ==================";
+    private const string ChatHelpReplacement = "Main commands / Commandes:\n/help // show this message\n/krok help // show all MP commands\n/krok rules // list current game rules\n/krok rule [rule] [value] // set a rule (host)\n/krok maxplayers [number] // set max players (host)\n/krok kick [player] // kick player (host)\n\nTip: open the console and run 'krok help' for full syntax.";
 
     public static bool TryPatchKrokoshaMod(string gameFolderPath, string ipPort, string playerName, string password, out string message)
     {
@@ -58,6 +69,41 @@ public static class ModTextPatcher
                         if (s.StartsWith(BodyOriginalPrefix, StringComparison.Ordinal))
                         {
                             instruction.Operand = BodyReplacement;
+                            changed = true;
+                            continue;
+                        }
+
+                        if (s == ConsoleDisabledSvCheatsOriginal)
+                        {
+                            instruction.Operand = ConsoleDisabledSvCheatsReplacement;
+                            changed = true;
+                            continue;
+                        }
+
+                        if (s == ConsoleDisabledByRulesOriginal)
+                        {
+                            instruction.Operand = ConsoleDisabledByRulesReplacement;
+                            changed = true;
+                            continue;
+                        }
+
+                        if (s == UnknownCommandOriginal)
+                        {
+                            instruction.Operand = UnknownCommandReplacement;
+                            changed = true;
+                            continue;
+                        }
+
+                        if (s.StartsWith(ChatHelpOriginalPrefix, StringComparison.Ordinal))
+                        {
+                            instruction.Operand = ChatHelpReplacement;
+                            changed = true;
+                            continue;
+                        }
+
+                        if (s.Contains(ModdedCommandsHeaderMarker, StringComparison.Ordinal))
+                        {
+                            instruction.Operand = ModdedCommandsHeaderReplacement;
                             changed = true;
                         }
                     }

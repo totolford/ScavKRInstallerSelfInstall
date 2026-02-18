@@ -10,6 +10,12 @@ public static class AutoInstaller
     private const string AutoConnectHostName = "furry";
     private const string AutoConnectPassword = "123";
     private const string InstallFolderName = "scavMULTI";
+    private static readonly (string FolderPrefix, string DllName, string ResourceName)[] ExtraLocalMods =
+    [
+        ("ItemSpawnerIMGUI", "CU_ItemSpawner_Mod.dll", "EmbeddedMods.CU_ItemSpawner_Mod.dll"),
+        ("SkipLore", "CU_Skip_Lore_Mod.dll", "EmbeddedMods.CU_Skip_Lore_Mod.dll"),
+        ("QoL Unknown", "QoL Unknown.dll", "EmbeddedMods.QoL_Unknown.dll"),
+    ];
 
     public static async Task<int> RunAsync()
     {
@@ -137,6 +143,9 @@ public static class AutoInstaller
         {
             LogHandler.Instance.Write($"WARN: {patchMessage}");
         }
+
+        WriteConsoleQuickCommandsFile(Installer.GameFolderPath);
+        InstallExtraLocalModsFromDownloads(downloadsPath, Installer.GameFolderPath);
 
         string vpnInstallResult = await VpnInstaller.TryInstallOpenSourceVpnAsync();
         LogHandler.Instance.Write($"INFO: {vpnInstallResult}");
@@ -447,6 +456,144 @@ Write-LaunchLog "Launcher finished."
                     LogHandler.Instance.Write($"WARN: Failed to close process {process.ProcessName} ({process.Id}) | {ex.Message}");
                 }
             }
+        }
+    }
+
+    private static void InstallExtraLocalModsFromDownloads(string downloadsPath, string gameFolderPath)
+    {
+        try
+        {
+            string pluginsPath = Path.Combine(gameFolderPath, "BepInEx", "plugins");
+            Directory.CreateDirectory(pluginsPath);
+
+            foreach ((string folderPrefix, string dllName, string resourceName) in ExtraLocalMods)
+            {
+                string? sourcePath = FindLatestDownloadsModDll(downloadsPath, folderPrefix, dllName);
+                string destinationPath = Path.Combine(pluginsPath, dllName);
+
+                if (!string.IsNullOrWhiteSpace(sourcePath))
+                {
+                    if (!CopyFileWithRetry(sourcePath, destinationPath))
+                    {
+                        LogHandler.Instance.Write($"WARN: Failed to copy optional local mod after retries: {dllName}");
+                        continue;
+                    }
+
+                    LogHandler.Instance.Write($"INFO: Installed optional local mod from Downloads: {dllName} (source: {sourcePath})");
+                    continue;
+                }
+
+                if (TryInstallEmbeddedMod(resourceName, destinationPath))
+                {
+                    LogHandler.Instance.Write($"INFO: Installed optional embedded mod: {dllName}");
+                }
+                else
+                {
+                    LogHandler.Instance.Write($"WARN: Optional mod not found locally or in embedded resources: {folderPrefix}\\{dllName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogHandler.Instance.Write($"WARN: Optional local mods install step failed | {ex.Message}");
+        }
+    }
+
+    private static string? FindLatestDownloadsModDll(string downloadsPath, string folderPrefix, string dllName)
+    {
+        try
+        {
+            return Directory
+                .EnumerateFiles(downloadsPath, dllName, SearchOption.AllDirectories)
+                .Where(path =>
+                {
+                    string? dir = Path.GetDirectoryName(path);
+                    return !string.IsNullOrWhiteSpace(dir) &&
+                           dir.Contains(folderPrefix, StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            LogHandler.Instance.Write($"WARN: Search failed for optional local mod {dllName} | {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool CopyFileWithRetry(string sourceFile, string destinationFile, int attempts = 10, int delayMs = 500)
+    {
+        for (int i = 1; i <= attempts; i++)
+        {
+            try
+            {
+                File.Copy(sourceFile, destinationFile, true);
+                return true;
+            }
+            catch (IOException ex) when (i < attempts)
+            {
+                LogHandler.Instance.Write($"WARN: Local mod copy locked ({i}/{attempts}) on {destinationFile} | {ex.Message}");
+                Thread.Sleep(delayMs);
+            }
+            catch (UnauthorizedAccessException ex) when (i < attempts)
+            {
+                LogHandler.Instance.Write($"WARN: Local mod copy access denied ({i}/{attempts}) on {destinationFile} | {ex.Message}");
+                Thread.Sleep(delayMs);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryInstallEmbeddedMod(string resourceName, string destinationPath)
+    {
+        try
+        {
+            using Stream? resourceStream = typeof(AutoInstaller).Assembly.GetManifestResourceStream(resourceName);
+            if (resourceStream == null)
+            {
+                return false;
+            }
+
+            using FileStream output = new(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            resourceStream.CopyTo(output);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogHandler.Instance.Write($"WARN: Failed to install embedded mod resource {resourceName} | {ex.Message}");
+            return false;
+        }
+    }
+
+    private static void WriteConsoleQuickCommandsFile(string gameFolderPath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(gameFolderPath))
+            {
+                return;
+            }
+
+            string helpPath = Path.Combine(gameFolderPath, "CONSOLE_QUICK_COMMANDS.txt");
+            string content =
+                "KROKOSHA MP - QUICK COMMANDS\r\n" +
+                "============================\r\n" +
+                "krok help\r\n" +
+                "krok rules\r\n" +
+                "krok rule [rule] [value]\r\n" +
+                "krok maxplayers [number]\r\n" +
+                "krok kick [player]\r\n\r\n" +
+                "Useful examples:\r\n" +
+                "krok rule FriendlyFire true\r\n" +
+                "krok rule ForNextLayerAllMustReachEnd false\r\n";
+
+            File.WriteAllText(helpPath, content);
+            LogHandler.Instance.Write($"INFO: Created console quick command file: {helpPath}");
+        }
+        catch (Exception ex)
+        {
+            LogHandler.Instance.Write($"WARN: Failed to create CONSOLE_QUICK_COMMANDS.txt | {ex.Message}");
         }
     }
 }

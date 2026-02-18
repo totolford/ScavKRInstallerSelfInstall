@@ -21,4 +21,10 @@
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedMods\CU_ItemSpawner_Mod.dll" LogicalName="EmbeddedMods.CU_ItemSpawner_Mod.dll" />
+    <EmbeddedResource Include="EmbeddedMods\CU_Skip_Lore_Mod.dll" LogicalName="EmbeddedMods.CU_Skip_Lore_Mod.dll" />
+    <EmbeddedResource Include="EmbeddedMods\QoL Unknown.dll" LogicalName="EmbeddedMods.QoL_Unknown.dll" />
+  </ItemGroup>
+
 </Project>
